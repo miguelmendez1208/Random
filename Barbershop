@@ -1,0 +1,208 @@
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.Semaphore;
+
+/**
+ * A Sleeping Barber Algorithm implementation
+ * 
+ * @author Lukasz Grzegorz Maciak
+ */
+public class BarberShop {
+	// semaphores
+	public Semaphore max_capacity;
+	public Semaphore sofa; // the waiting room chairs
+	public Semaphore barber_chair, coord;
+	public Semaphore mutex1;
+	public Semaphore mutex2;
+	public Semaphore cust_ready, leave_b_chair, payment, receipt;
+	public Semaphore finished[];// the actual barber
+	public int finished_count;
+	public int count;
+	public Queue<Integer> waitingQueue = new LinkedList<>();
+
+	/**
+	 * Dedault constructor.
+	 * 
+	 * @param chair_number the number of chairs in the barber shop
+	 */
+	public BarberShop() {
+		// the barber chair is free - first thread in, can grab it but
+		// no thread can get a haircut unless it obtains both barber and
+		// barber chair.
+		/*
+		Semaphore max_capacity = new Semaphore(20);
+		Semaphore sofa = new Semaphore(4); // the waiting room chairs
+		Semaphore barber_chair = new Semaphore(3);
+		Semaphore coord = new Semaphore(3);
+		Semaphore mutex1 = new Semaphore(1);
+		Semaphore mutex2 = new Semaphore(1);
+		Semaphore cust_ready = new Semaphore(0), leave_b_chair = new Semaphore(0), payment = new Semaphore(0),
+				receipt = new Semaphore(0);
+		finished_count = 50;
+		Semaphore[] finished = new Semaphore[finished_count];
+
+		for (int i = 0; i < finished_count; i++) {
+			finished[i] = new Semaphore(0);
+		}
+		*/
+	}
+
+	class Custie extends Thread {
+		int x;
+
+		public Custie() {
+			x = 1;
+		}
+
+		public void run() {
+			int custnr;
+			try {
+				max_capacity.acquire();
+				enter_shop();
+				mutex1.acquire();
+				custnr = count;
+				count++;
+				mutex1.wait();
+				sofa.release();
+				sit_on_sofa();
+				barber_chair.acquire();
+				get_up_from_sofa();
+				sofa.release();
+				sit_in_barber_chair();
+				mutex2.acquire();
+				waitingQueue.add(custnr);
+				cust_ready.release();
+				mutex2.release();
+				finished[custnr].acquire();
+				leave_barber_chair();
+				leave_b_chair.release();
+				pay();
+				payment.release();
+				receipt.acquire();
+				exit_shop();
+				max_capacity.release();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+		public void enter_shop() {
+			System.out.println("Entering shop");
+		}
+
+		public void sit_on_sofa() {
+			System.out.println("Sitting on sofa");
+		}
+
+		public void get_up_from_sofa() {
+			System.out.println("Getting up from sofa");
+		}
+
+		public void leave_barber_chair() {
+			System.out.println("Leave barber chair");
+		}
+
+		public void pay() {
+			System.out.println("Paying");
+		}
+
+		public void exit_shop() {
+			System.out.println("Exiting shop");
+		}
+
+		public void sit_in_barber_chair() {
+			System.out.println("Sitting in barber chair");
+		}
+
+	}
+
+	class barbie extends Thread {
+		// public BarberShop shop;
+		public int x;
+
+		public barbie() {
+			x = 1;
+		}
+
+		public void run() {
+			int b_cust = 0;
+			while (true) {
+				try {
+					cust_ready.acquire();
+					mutex2.acquire();
+					b_cust = waitingQueue.remove();
+					mutex2.release();
+					coord.acquire();
+					cut_hair();
+					coord.release();
+					finished[b_cust].release();
+					leave_b_chair.acquire();
+					barber_chair.release();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+
+		public void cut_hair() {
+			// TODO Auto-generated method stub
+			System.out.println("Cutting Hair");
+		}
+
+	}
+
+	class cashier extends Thread {
+		public void run() {
+			while (true) {
+
+				try {
+					payment.acquire();
+					coord.acquire();
+					accept_pay();
+					coord.release();
+					receipt.release();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+
+		public void accept_pay() {
+			System.out.println("Accepting Pay");
+		}
+	}
+
+	public static void main(String[] args) {
+		// Sorry, no command line argument parser
+		// please edit the line below to change the
+		// number of visiting customers
+    /* put the semaphores here ??? or in the intializer
+		Semaphore max_capacity = new Semaphore(20);
+		Semaphore sofa = new Semaphore(4); // the waiting room chairs
+		Semaphore barber_chair = new Semaphore(3);
+		Semaphore coord = new Semaphore(3);
+		Semaphore mutex1 = new Semaphore(1);
+		Semaphore mutex2 = new Semaphore(1);
+		Semaphore cust_ready = new Semaphore(0), leave_b_chair = new Semaphore(0), payment = new Semaphore(0),
+				receipt = new Semaphore(0);
+		finished_count = 50;
+		Semaphore[] finished = new Semaphore[finished_count];
+    */
+		for (int i = 0; i < finished_count; i++) {
+			finished[i] = new Semaphore(0);
+		}
+
+		int customer_number = 4;
+		barbie[] barbs = new barbie[3];
+		for (int i = 0; i < customer_number; i++)
+			barbs[i].start();
+		cashier[] cashie = new cashier[1];
+		cashie[1].start();
+		Custie[] cust = new Custie[customer_number];
+		for (int i = 0; i < customer_number; i++)
+			cust[i].start();
+	}
+}
